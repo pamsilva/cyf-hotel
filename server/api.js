@@ -79,11 +79,11 @@ router.post('/customer/', function(req, res) {
 
     db.run(`INSERT INTO customers (title, firstname, surname, email) VALUES (?, ?, ?, ?)`, [user.title, user.firstname, user.surname, user.email], function(error) {
       if (error) {
-        return console.log(error.message);
+        console.log(error.message);
+        res.status(500).send(error.message);
       }
 
-      console.log('Inserted 1 customer on the database.')
-      return res.sendStatus(201);
+      return res.status(201).send('Customer added successfully.');
     });
   })
 });
@@ -149,18 +149,17 @@ router.put('/customer/:id', function(req, res) {
     const {setStatements, valuesToUpdate} = extractColumnsToSetStatementsAndTheirValues(user);
 
     if (setStatements.length == 0) {
-      console.log('Nothing to update: bad request');
-      return res.sendStatus(400, 'Nothing to update on user ' + id);
+      return res.status(400).send('Nothing to update on user ' + id);
     }
 
     const sql = 'UPDATE customers set ' + setStatements.join() + ' where id = ?';
     db.run(sql, valuesToUpdate.concat(id), function (error) {
       if (error) {
-        return console.log(error.message);
+        console.log(error.message);
+        return res.status(500).send(error.message);
       }
 
-      console.log('updated 1 customer on the database.')
-      return res.sendStatus(200);
+      return res.status(200).send('Updated customer ' + id + ' on the database successfully.');
     })
 
   });
