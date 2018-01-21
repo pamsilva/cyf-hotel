@@ -165,9 +165,9 @@ router.put('/customer/:id', function(req, res) {
   });
 });
 
-router.post('/reservations', function(req, res) {
+router.post('/reservation', function(req, res) {
   // TODO read req.body.reservation, look up price by room id and insert reservation into DB
-  res.status(200).json(req.body.reservation);
+  res.status(400).send("No reservation data provided.");
 });
 
 router.get('/reservation/:id', function(req, res) {
@@ -221,6 +221,18 @@ router.get('/reservations/date-from/:dateFrom', function(req, res) {
       checkOutDate: '2017-11-15'
     }]
   });
+});
+
+router.delete('/reservation/:id', function(req, res) {
+  res.status(400).send("No valid reservation_id was provided.");
+});
+
+router.get('/reservations/for-customer/:customer_id', function(req, res) {
+  res.status(400).send("No valid customer_id was provided.");
+});
+
+router.get('/rooms/available-in/:from_day/:to_day', function(req, res) {
+  res.status(400).send("No valid date range was provided.");
 });
 
 // router.put('/invoice', function(req, res) {
