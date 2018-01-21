@@ -5,8 +5,9 @@ CREATE TABLE customers (
     title     VARCHAR(10),
     firstname VARCHAR (50),
     surname   VARCHAR (50),
-    email     VARCHAR (255) 
+    email     VARCHAR (255)
 );
+
 
 DROP TABLE IF EXISTS invoices;
 
@@ -19,6 +20,7 @@ CREATE TABLE invoices (
     paid              BOOLEAN  DEFAULT false
 );
 
+
 DROP TABLE IF EXISTS room_types;
 
 CREATE TABLE room_types (
@@ -28,6 +30,7 @@ CREATE TABLE room_types (
     current_price  INT
 );
 
+
 DROP TABLE IF EXISTS rooms;
 
 CREATE TABLE rooms (
@@ -36,4 +39,14 @@ CREATE TABLE rooms (
     sea_view     BOOLEAN
 );
 
-INSERT INTO customers (title, firstname, surname, email) VALUES ('Mr.', 'Tom', 'Jones', 'tom@jones.com');
+
+DROP TABLE IF EXISTS reservations;
+
+CREATE TABLE reservations (
+  id          INTEGER       PRIMARY KEY AUTOINCREMENT,
+  customer_id     INTEGER
+  room_id         INTEGER
+  check_in_date   DATE
+  check_out_date  DATE
+  room_price      INTEGER
+)
