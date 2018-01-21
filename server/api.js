@@ -88,37 +88,33 @@ router.post('/customer/', function(req, res) {
   })
 });
 
-function appendIfDefined(base, key, maybeValue) {
-  if (maybeValue === undefined) {
-    return base + maybeSuffix;
-  } else {
-    return base;
-  }
+
+function filterColumnsToUpdate(templateObject) {
+  const columnsToUpdate = Object.keys(templateObject);
+  return columnsToUpdate.filter(column => templateObject[column] != undefined);
 };
 
-function filterPropsToUpdate(templateObject) {
-  let orderedProperties = [];
-  for(let propName in templateObject){
-    if (templateObject[propName] != undefined) {
-      orderedProperties = orderedProperties.concat(propName);
-    }
-  }
 
-  return orderedProperties;
-};
-
-function generateSetStatements(columnsToUpdate) {
-  let setStatements = [];
-  for (let i in columnsToUpdate){
-    setStatements = setStatements.concat(columnsToUpdate[i] + ' = ?');
-  }
-
-  return setStatements;
+function generateSetSubStatements(columnsToUpdate) {
+  return columnsToUpdate.map(column => column + ' = ? ');
 };
 
 function getValuesToUpdate(baseObject, relevantKeys) {
   return relevantKeys.map(key => baseObject[key]);
-}
+};
+
+function extractColumnsToSetStatementsAndTheirValues(receivedObject) {
+  let setStatements = [];
+  let valuesToUpdate = [];
+  for(let propName in receivedObject){
+    if (receivedObject[propName] != undefined) {
+      setStatements = setStatements.concat(propName + '= ? ');
+      valuesToUpdate = valuesToUpdate.concat(receivedObject[propName]);
+    }
+  }
+
+  return {setStatements, valuesToUpdate};
+};
 
 router.put('/customer/:id', function(req, res) {
   // EXPECTED JSON Object:
@@ -139,25 +135,25 @@ router.put('/customer/:id', function(req, res) {
       email: req.body.email
     };
 
-    const propsToUpdate = filterPropsToUpdate(user);
-    if (propsToUpdate.length == 0) {
+    // Functional and 'One function should only do one thing'
+    // const propsToUpdate = filterColumnsToUpdate(user);
+    // if (propsToUpdate.length == 0) {
+    //   console.log('Nothing to update: bad request');
+    //   return res.sendStatus(400, 'Nothing to update on user ' + id);
+    // }
+    //
+    // const setStatements = generateSetSubStatements(propsToUpdate);
+    // const valuesToUpdate = getValuesToUpdate(user, propsToUpdate);
+
+    // Aproximation, but function does more than one thing
+    const {setStatements, valuesToUpdate} = extractColumnsToSetStatementsAndTheirValues(user);
+
+    if (setStatements.length == 0) {
       console.log('Nothing to update: bad request');
       return res.sendStatus(400, 'Nothing to update on user ' + id);
     }
 
-    const setStatements = generateSetStatements(propsToUpdate);
-    const valuesToUpdate = getValuesToUpdate(user, propsToUpdate);
-    // let columnsToUpdate = '';
-    // let orderedValues = [];
-    // for(let propName in user){
-    //   if (user[propName] != undefined) {
-    //     columnsToUpdate += propName + '= ?';
-    //     orderedValues = orderedValues.concat(user[propName]);
-    //   }
-    // }
-
     const sql = 'UPDATE customers set ' + setStatements.join() + ' where id = ?';
-
     db.run(sql, valuesToUpdate.concat(id), function (error) {
       if (error) {
         return console.log(error.message);
