@@ -8,27 +8,27 @@ let db = new sqlite3.Database(filename);
 
 router.get('/customers', function(req, res) {
 
-  res.status(200).json({
-    customers: [{
-      id: 2,
-      title: 'Mr',
-      firstname: 'Laurie',
-      surname: 'Ainley',
-      email: 'laurie@ainley.com'
-    }
-  ]});
+  // res.status(200).json({
+  //   customers: [{
+  //     id: 2,
+  //     title: 'Mr',
+  //     firstname: 'Laurie',
+  //     surname: 'Ainley',
+  //     email: 'laurie@ainley.com'
+  //   }
+  // ]});
 
   // TODO comment out response above and uncomment the below
-  // db.serialize(function() {
-  //
-  //   var sql = 'select * from customers';
-  //
-  //   db.all(sql, [],(err, rows ) => {
-  //     res.status(200).json({
-  //       customers: rows
-  //     });
-  //   });
-  // });
+  db.serialize(function() {
+
+    var sql = 'select * from customers';
+
+    db.all(sql, [],(err, rows ) => {
+      res.status(200).json({
+        customers: rows
+      });
+    });
+  });
 
 });
 
@@ -65,9 +65,10 @@ router.post('/customer/', function(req, res) {
   //   email: 'laurie@ainley.com'
   // }
 
+  // EXAMPLE CURL REQUEST
+  // curl -X POST -d @payload.json http://localhost:8080/api/customer --header "Content-Type:application/json"
+
   db.serialize(function() {
-    // EXAMPLE CURL REQUEST
-    // curl -X POST -d @payload.json http://localhost:8080/api/customer --header "Content-Type:application/json"
 
     const user = {
       title: req.body.title,
@@ -85,6 +86,88 @@ router.post('/customer/', function(req, res) {
       return res.sendStatus(201);
     });
   })
+});
+
+function appendIfDefined(base, key, maybeValue) {
+  if (maybeValue === undefined) {
+    return base + maybeSuffix;
+  } else {
+    return base;
+  }
+};
+
+function filterPropsToUpdate(templateObject) {
+  let orderedProperties = [];
+  for(let propName in templateObject){
+    if (templateObject[propName] != undefined) {
+      orderedProperties = orderedProperties.concat(propName);
+    }
+  }
+
+  return orderedProperties;
+};
+
+function generateSetStatements(columnsToUpdate) {
+  let setStatements = [];
+  for (let i in columnsToUpdate){
+    setStatements = setStatements.concat(columnsToUpdate[i] + ' = ?');
+  }
+
+  return setStatements;
+};
+
+function getValuesToUpdate(baseObject, relevantKeys) {
+  return relevantKeys.map(key => baseObject[key]);
+}
+
+router.put('/customer/:id', function(req, res) {
+  // EXPECTED JSON Object:
+  // {
+  //   title: 'Mr',
+  //   firstname: 'Laurie',
+  //   surname: 'Ainley',
+  //   email: 'laurie@ainley.com'
+  // }
+
+  db.serialize(function() {
+    const id = req.params.id;
+
+    const user = {
+      title: req.body.title,
+      firstname: req.body.firstname,
+      surname: req.body.surname,
+      email: req.body.email
+    };
+
+    const propsToUpdate = filterPropsToUpdate(user);
+    if (propsToUpdate.length == 0) {
+      console.log('Nothing to update: bad request');
+      return res.sendStatus(400, 'Nothing to update on user ' + id);
+    }
+
+    const setStatements = generateSetStatements(propsToUpdate);
+    const valuesToUpdate = getValuesToUpdate(user, propsToUpdate);
+    // let columnsToUpdate = '';
+    // let orderedValues = [];
+    // for(let propName in user){
+    //   if (user[propName] != undefined) {
+    //     columnsToUpdate += propName + '= ?';
+    //     orderedValues = orderedValues.concat(user[propName]);
+    //   }
+    // }
+
+    const sql = 'UPDATE customers set ' + setStatements.join() + ' where id = ?';
+
+    db.run(sql, valuesToUpdate.concat(id), function (error) {
+      if (error) {
+        return console.log(error.message);
+      }
+
+      console.log('updated 1 customer on the database.')
+      return res.sendStatus(200);
+    })
+
+  });
 });
 
 router.post('/reservations', function(req, res) {
