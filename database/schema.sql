@@ -44,9 +44,9 @@ DROP TABLE IF EXISTS reservations;
 
 CREATE TABLE reservations (
   id          INTEGER       PRIMARY KEY AUTOINCREMENT,
-  customer_id     INTEGER
-  room_id         INTEGER
-  check_in_date   DATE
-  check_out_date  DATE
+  customer_id     INTEGER,
+  room_id         INTEGER,
+  check_in_date   DATE,
+  check_out_date  DATE,
   room_price      INTEGER
 )
