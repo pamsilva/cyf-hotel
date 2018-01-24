@@ -18,7 +18,6 @@ router.get('/customers', function(req, res) {
   //   }
   // ]});
 
-  // TODO comment out response above and uncomment the below
   db.serialize(function() {
 
     var sql = 'select * from customers';
@@ -102,20 +101,6 @@ function getValuesToUpdate(baseObject, relevantKeys) {
   return relevantKeys.map(key => baseObject[key]);
 };
 
-
-// function extractColumnsToSetStatementsAndTheirValues(receivedObject) {
-//   let setStatements = [];
-//   let valuesToUpdate = [];
-//   for(let propName in receivedObject){
-//     if (receivedObject[propName] != undefined) {
-//       setStatements = setStatements.concat(propName + '= ? ');
-//       valuesToUpdate = valuesToUpdate.concat(receivedObject[propName]);
-//     }
-//   }
-//
-//   return {setStatements, valuesToUpdate};
-// };
-
 router.put('/customer/:id', function(req, res) {
   // EXPECTED JSON Object:
   // {
@@ -145,13 +130,6 @@ router.put('/customer/:id', function(req, res) {
     const setStatements = generateSetSubStatements(propsToUpdate);
     const valuesToUpdate = getValuesToUpdate(user, propsToUpdate);
 
-    // Aproximation, but function does more than one thing
-    // const {setStatements, valuesToUpdate} = extractColumnsToSetStatementsAndTheirValues(user);
-
-    if (setStatements.length == 0) {
-      return res.status(400).send('Nothing to update on user ' + id);
-    }
-
     const sql = 'UPDATE customers set ' + setStatements.join() + ' where id = ?';
     db.run(sql, valuesToUpdate.concat(id), function (error) {
       if (error) {
@@ -165,6 +143,7 @@ router.put('/customer/:id', function(req, res) {
   });
 });
 
+// ------------------------------------------------------------------------
 // Create reservations table
 
 router.get('/reservations', function(req, res) {
@@ -180,20 +159,14 @@ router.get('/reservations', function(req, res) {
   });
 });
 
-
-
-// -----------------------------------------------------------------------------
-// -----------------------------------------------------------------------------
-// -----------------------------------------------------------------------------
-
-
+// ------------------------------------------------------------------------
+// Second practical part
 
 router.get('/reservation/:id', function(req, res) {
   db.serialize(function() {
     const id = req.params.id;
     const sql = 'select * from reservations where id = ' + id;
     console.log(sql);
-    // TODO: add alternative that prevents sqlinjection
 
     db.get(sql, [],(err, rows) => {
       res.status(200).json({
@@ -226,13 +199,12 @@ router.get('/reservations/date-from/:dateFrom', function(req, res) {
 router.delete('/reservation/:id', function(req, res) {
   db.serialize(function() {
     const id = req.params.id;
-
     // SQL injected url to delete all reservation entries:
     // curl -X DELETE http://localhost:8080/api/reservation/6%20or%201%3D1
-    const sql = 'delete from reservations where id ' + id;
 
-    // proper way
+    // alternative that prevents sqlinjection
     // const sql = 'delete from reservations where id = ?';
+    const sql = 'delete from reservations where id ' + id;
 
     db.run(sql, [id],(err, rows) => {
       res.status(200).json({
@@ -250,6 +222,10 @@ router.get('/rooms/available-in/:from_day/:to_day', function(req, res) {
   res.status(400).send("No valid date range was provided.");
 });
 
+
+// TODO: Use cases to include group by and other fancy stuff
+
+// Stuff to delete - probably
 // router.put('/invoice', function(req, res) {
 //   // TODO read req.query.reservationId and req.body.invoice and insert into DB
 //   res.status(200).json({
