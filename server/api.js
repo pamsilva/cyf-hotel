@@ -168,7 +168,7 @@ router.put('/customer/:id', function(req, res) {
 // Create reservations table
 
 router.get('/reservations', function(req, res) {
-  res.status(200).json({
+  db.serialize(function() {
     const sql = 'select * from reservations';
     console.log(sql);
 
@@ -210,7 +210,7 @@ router.post('/reservation', function(req, res) {
 
 
 router.get('/reservations/date-from/:dateFrom', function(req, res) {
-  res.status(200).json({
+  db.serialize(function() {
     const dateFrom = req.params.dateFrom;
     const sql = 'select * from reservations';
     console.log(sql);
