@@ -138,7 +138,7 @@ router.put('/customer/:id', function(req, res) {
       }
 
       return res.status(200).send('Updated customer ' + id + ' on the database successfully.');
-    })
+    });
 
   });
 });
@@ -177,8 +177,40 @@ router.get('/reservation/:id', function(req, res) {
 });
 
 router.post('/reservation', function(req, res) {
-  // TODO read req.body.reservation, look up price by room id and insert reservation into DB
-  res.status(400).send("No reservation data provided.");
+  // EXPECTED JSON Object:
+  // {
+  //   customer_id: 1,
+  //   room_id: 1,
+  //   check_in_date: '2018-01-20',
+  //   check_out_date: '2018-01-22',
+  //   room_price: 129.90
+  // }
+
+  db.serialize(function() {
+    const reservation = {
+      customer_id: req.body.customer_id,
+      room_id: req.body.room_id,
+      check_in_date: req.body.check_in_date,
+      check_out_date: req.body.check_out_date,
+      room_price: req.body.room_price
+    }
+
+    const sql = 'INSERT INTO reservations (customer_id, room_id, check_in_date, check_out_date, room_price) VALUES (?, ?, ?, ?, ?)';
+    db.run(sql, [
+      reservation.customer_id,
+      reservation.room_id,
+      reservation.check_in_date,
+      reservation.check_out_date,
+      reservation.room_price
+    ], function(error) {
+      if (error) {
+        console.log(error.message);
+        res.status(500).send(error.message);
+      }
+
+      return res.status(201).send('Reservation added successfully.');
+    });
+  });
 });
 
 
