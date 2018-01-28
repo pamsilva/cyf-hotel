@@ -7,7 +7,6 @@ const sqlite3 = require( 'sqlite3' ).verbose();
 let db = new sqlite3.Database(filename);
 
 router.get('/customers', function(req, res) {
-
   // res.status(200).json({
   //   customers: [{
   //     id: 2,
@@ -18,43 +17,35 @@ router.get('/customers', function(req, res) {
   //   }
   // ]});
 
-  db.serialize(function() {
+  var sql = 'select * from customers';
 
-    var sql = 'select * from customers';
-
-    db.all(sql, [], (err, rows ) => {
-      res.status(200).json({
-        customers: rows
-      });
+  db.all(sql, [], (err, rows ) => {
+    res.status(200).json({
+      customers: rows
     });
   });
-
 });
 
 
 router.get('/customers/:surname', function(req, res) {
-  db.serialize(function() {
-    const surname = req.params.surname;
-    const sql = 'select * from customers where surname like ?';
+  const surname = req.params.surname;
+  const sql = 'select * from customers where surname like ?';
 
-    db.get(sql, [surname], function(err, rows) {
-      res.status(200).json({
-        customers: rows
-      });
+  db.get(sql, [surname], function(err, rows) {
+    res.status(200).json({
+      customers: rows
     });
   });
 });
 
 
 router.get('/customer/:id', function(req, res) {
-  db.serialize(function() {
-    const id = req.params.id;
-    const sql = 'select * from customers where id = ?';
+  const id = req.params.id;
+  const sql = 'select * from customers where id = ?';
 
-    db.get(sql, [id], (err, rows) => {
-      res.status(200).json(rows);
-    });
-  })
+  db.get(sql, [id], (err, rows) => {
+    res.status(200).json(rows);
+  });
 });
 
 
@@ -70,24 +61,21 @@ router.post('/customer/', function(req, res) {
   // EXAMPLE CURL REQUEST
   // curl -X POST -d @payload.json http://localhost:8080/api/customer --header "Content-Type:application/json"
 
-  db.serialize(function() {
+  const user = {
+    title: req.body.title,
+    firstname: req.body.firstname,
+    surname: req.body.surname,
+    email: req.body.email
+  };
 
-    const user = {
-      title: req.body.title,
-      firstname: req.body.firstname,
-      surname: req.body.surname,
-      email: req.body.email
-    };
+  db.run(`INSERT INTO customers (title, firstname, surname, email) VALUES (?, ?, ?, ?)`, [user.title, user.firstname, user.surname, user.email], function(err) {
+    if (err) {
+      console.log(err.message);
+      res.status(500).send(err.message);
+    }
 
-    db.run(`INSERT INTO customers (title, firstname, surname, email) VALUES (?, ?, ?, ?)`, [user.title, user.firstname, user.surname, user.email], function(err) {
-      if (err) {
-        console.log(err.message);
-        res.status(500).send(err.message);
-      }
-
-      return res.status(201).send('Customer added successfully.');
-    });
-  })
+    return res.status(201).send('Customer added successfully.');
+  });
 });
 
 
@@ -113,36 +101,33 @@ router.put('/customer/:id', function(req, res) {
   //   email: 'laurie@ainley.com'
   // }
 
-  db.serialize(function() {
-    const id = req.params.id;
+  const id = req.params.id;
 
-    const user = {
-      title: req.body.title,
-      firstname: req.body.firstname,
-      surname: req.body.surname,
-      email: req.body.email
-    };
+  const user = {
+    title: req.body.title,
+    firstname: req.body.firstname,
+    surname: req.body.surname,
+    email: req.body.email
+  };
 
-    // Functional and 'One function should only do one thing'
-    const propsToUpdate = filterColumnsToUpdate(user);
-    if (propsToUpdate.length == 0) {
-      console.log('Nothing to update: bad request');
-      return res.sendStatus(400, 'Nothing to update on user ' + id);
+  // Functional and 'One function should only do one thing'
+  const propsToUpdate = filterColumnsToUpdate(user);
+  if (propsToUpdate.length == 0) {
+    console.log('Nothing to update: bad request');
+    return res.sendStatus(400, 'Nothing to update on user ' + id);
+  }
+
+  const setStatements = generateSetSubStatements(propsToUpdate);
+  const valuesToUpdate = getValuesToUpdate(user, propsToUpdate);
+
+  const sql = 'UPDATE customers set ' + setStatements.join() + ' where id = ?';
+  db.run(sql, valuesToUpdate.concat(id), function (err) {
+    if (err) {
+      console.log(err.message);
+      return res.status(500).send(err.message);
     }
 
-    const setStatements = generateSetSubStatements(propsToUpdate);
-    const valuesToUpdate = getValuesToUpdate(user, propsToUpdate);
-
-    const sql = 'UPDATE customers set ' + setStatements.join() + ' where id = ?';
-    db.run(sql, valuesToUpdate.concat(id), function (err) {
-      if (err) {
-        console.log(err.message);
-        return res.status(500).send(err.message);
-      }
-
-      return res.status(200).send('Updated customer ' + id + ' on the database successfully.');
-    });
-
+    return res.status(200).send('Updated customer ' + id + ' on the database successfully.');
   });
 });
 
@@ -151,14 +136,12 @@ router.put('/customer/:id', function(req, res) {
 // ////////////////////////////////////
 
 router.get('/reservations', function(req, res) {
-  db.serialize(function() {
-    const sql = 'select * from reservations';
-    console.log(sql);
+  const sql = 'select * from reservations';
+  console.log(sql);
 
-    db.all(sql, [], (err, rows) => {
-      res.status(200).json({
-        customers: rows
-      });
+  db.all(sql, [], (err, rows) => {
+    res.status(200).json({
+      customers: rows
     });
   });
 });
@@ -168,15 +151,13 @@ router.get('/reservations', function(req, res) {
 // Second class practical part
 
 router.get('/reservation/:id', function(req, res) {
-  db.serialize(function() {
-    const id = req.params.id;
-    const sql = 'select * from reservations where id = ' + id;
-    console.log(sql);
+  const id = req.params.id;
+  const sql = 'select * from reservations where id = ' + id;
+  console.log(sql);
 
-    db.get(sql, [], (err, rows) => {
-      res.status(200).json({
-        customers: rows
-      });
+  db.get(sql, [], (err, rows) => {
+    res.status(200).json({
+      customers: rows
     });
   });
 });
@@ -192,159 +173,146 @@ router.post('/reservation', function(req, res) {
   //   room_price: 129.90
   // }
 
-  db.serialize(function() {
-    const reservation = {
-      customer_id: req.body.customer_id,
-      room_id: req.body.room_id,
-      check_in_date: req.body.check_in_date,
-      check_out_date: req.body.check_out_date,
-      room_price: req.body.room_price
+  const reservation = {
+    customer_id: req.body.customer_id,
+    room_id: req.body.room_id,
+    check_in_date: req.body.check_in_date,
+    check_out_date: req.body.check_out_date,
+    room_price: req.body.room_price
+  }
+
+  const sql = 'INSERT INTO reservations (customer_id, room_id, check_in_date, check_out_date, room_price) VALUES (?, ?, ?, ?, ?)';
+  db.run(sql, [
+    reservation.customer_id,
+    reservation.room_id,
+    reservation.check_in_date,
+    reservation.check_out_date,
+    reservation.room_price
+  ], function(err) {
+    if (err) {
+      console.log(err.message);
+      res.status(500).send(err.message);
     }
 
-    const sql = 'INSERT INTO reservations (customer_id, room_id, check_in_date, check_out_date, room_price) VALUES (?, ?, ?, ?, ?)';
-    db.run(sql, [
-      reservation.customer_id,
-      reservation.room_id,
-      reservation.check_in_date,
-      reservation.check_out_date,
-      reservation.room_price
-    ], function(err) {
-      if (err) {
-        console.log(err.message);
-        res.status(500).send(err.message);
-      }
-
-      return res.status(201).send('Reservation added successfully.');
-    });
+    return res.status(201).send('Reservation added successfully.');
   });
 });
 
 
 router.get('/reservations/between/:from_day/:to_day', function(req, res) {
-  db.serialize(function() {
-    const startDate = req.params.from_day;
-    const endDate = req.params.to_day;
+  const startDate = req.params.from_day;
+  const endDate = req.params.to_day;
 
-    const sql = '\
-      select * from reservations \
-      where check_in_date < ? \
-      and check_out_date > ? \
-      order by check_in_date';
+  const sql = '\
+    select * from reservations \
+    where check_in_date < ? \
+    and check_out_date > ? \
+    order by check_in_date';
 
-    db.all(sql, [endDate, startDate], (err, rows) => {
-      if (err) {
-        console.log(err.message);
-        res.status(500).send(err.message);
-      }
+  db.all(sql, [endDate, startDate], (err, rows) => {
+    if (err) {
+      console.log(err.message);
+      res.status(500).send(err.message);
+    }
 
-      res.status(200).json({
-        reservations: rows,
-        startDate, endDate
-      });
+    res.status(200).json({
+      reservations: rows,
+      startDate, endDate
     });
   });
 });
 
 
 router.get('/reservations/details-between/:from_day/:to_day', function(req, res) {
-  db.serialize(function() {
-    const startDate = req.params.from_day;
-    const endDate = req.params.to_day;
+  const startDate = req.params.from_day;
+  const endDate = req.params.to_day;
 
-    const sql = '\
-      select reservations.*, rooms.*, customers.* from reservations \
-      join rooms on reservations.room_id = rooms.id \
-      join customers on reservations.customer_id = customers.id \
-      where check_in_date < ? \
-      and check_out_date > ? \
-      order by check_in_date';
+  const sql = '\
+    select reservations.*, rooms.*, customers.* from reservations \
+    join rooms on reservations.room_id = rooms.id \
+    join customers on reservations.customer_id = customers.id \
+    where check_in_date < ? \
+    and check_out_date > ? \
+    order by check_in_date';
 
-    db.all(sql, [endDate, startDate], (err, rows) => {
-      if (err) {
-        console.log(err.message);
-        res.status(500).send(err.message);
-      }
+  db.all(sql, [endDate, startDate], (err, rows) => {
+    if (err) {
+      console.log(err.message);
+      res.status(500).send(err.message);
+    }
 
-      res.status(200).json({
-        reservations: rows,
-        startDate, endDate
-      });
+    res.status(200).json({
+      reservations: rows,
+      startDate, endDate
     });
   });
 });
 
 
 router.delete('/reservation/:id/', function(req, res) {
-  db.serialize(function() {
-    const id = req.params.id;
-    // SQL injected url to delete all reservation entries:
-    // curl -X DELETE http://localhost:8080/api/reservation/6%20or%201%3D1
+  const id = req.params.id;
+  // SQL injected url to delete all reservation entries:
+  // curl -X DELETE http://localhost:8080/api/reservation/6%20or%201%3D1
 
-    // alternative that prevents sqlinjection
-    // const sql = 'delete from reservations where id = ?';
-    const sql = 'delete from reservations where id = ' + id;
+  // alternative that prevents sqlinjection
+  // const sql = 'delete from reservations where id = ?';
+  const sql = 'delete from reservations where id = ' + id;
 
-    db.run(sql, [id], (err, rows) => {
-      res.status(200).json({
-        customers: rows
-      });
+  db.run(sql, [id], (err, rows) => {
+    res.status(200).json({
+      customers: rows
     });
   });
 });
 
 
 router.get('/reservations/for-customer/:customer_id', function(req, res) {
-  db.serialize(function() {
-    const id = req.params.customer_id;
+  const id = req.params.customer_id;
 
-    const sql = 'select reservations.* \
-      from reservations join customers \
-      on customers.id = reservations.customer_id \
-      where customers.id = ? \
-      order by reservations.check_in_date';
+  const sql = 'select reservations.* \
+    from reservations join customers \
+    on customers.id = reservations.customer_id \
+    where customers.id = ? \
+    order by reservations.check_in_date';
 
-    db.all(sql, [id], (err, rows) => {
-      if (err) {
-        console.log(err.message);
-        res.status(500).send(err.message);
-      }
+  db.all(sql, [id], (err, rows) => {
+    if (err) {
+      console.log(err.message);
+      res.status(500).send(err.message);
+    }
 
-      res.status(200).json({
-        reservations: rows,
-        customer_id: id,
-      });
+    res.status(200).json({
+      reservations: rows,
+      customer_id: id,
     });
   });
 });
 
 
 router.get('/rooms/available-in/:from_day/:to_day', function(req, res) {
+  const startDate = req.params.from_day;
+  const endDate = req.params.to_day;
 
-  db.serialize(function() {
-    const startDate = req.params.from_day;
-    const endDate = req.params.to_day;
+  const params = [endDate, startDate];
+  const sql = 'select * \
+      from rooms join room_types \
+      on rooms.room_type_id = room_types.id \
+      where rooms.id not in ( \
+        select rooms.id from rooms join reservations \
+        on rooms.id = reservations.room_id \
+        where reservations.check_in_date < ? \
+        and reservations.check_out_date > ? \
+      )';
 
-    const params = [endDate, startDate];
-    const sql = 'select * \
-        from rooms join room_types \
-        on rooms.room_type_id = room_types.id \
-        where rooms.id not in ( \
-          select rooms.id from rooms join reservations \
-          on rooms.id = reservations.room_id \
-          where reservations.check_in_date < ? \
-          and reservations.check_out_date > ? \
-        )';
+  db.all(sql, params, (err, rows) => {
+    if (err) {
+      console.log(err.message);
+      return res.status(500).send(err.message);
+    }
 
-    db.all(sql, params, (err, rows) => {
-      if (err) {
-        console.log(err.message);
-        return res.status(500).send(err.message);
-      }
-
-      res.status(200).json({
-        rooms: rows,
-        startDate, endDate
-      });
+    res.status(200).json({
+      rooms: rows,
+      startDate, endDate
     });
   });
 });
@@ -384,37 +352,33 @@ router.get('/most-reserved-rooms', function(req, res) {
   // .../most-reserved-rooms?startDate=2018-01-01
   // .../most-reserved-rooms?endDate=2018-01-01
 
-  db.serialize(function() {
-    const queryLimit = req.query.limit;
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
+  const queryLimit = req.query.limit;
+  const startDate = req.query.startDate;
+  const endDate = req.query.endDate;
 
-    const {args, maybeWhere} = maybeDefineWeb(startDate, endDate);
-    let compleArgs = args;
+  const {args, maybeWhere} = maybeDefineWeb(startDate, endDate);
+  let compleArgs = args;
 
-    let sql = 'select rooms.*, count(1) as count \
-        from rooms join reservations \
-        on rooms.id = reservations.room_id \
-        ' + maybeWhere + ' \
-        group by rooms.id \
-        order by count desc';
+  let sql = 'select rooms.*, count(1) as count \
+      from rooms join reservations \
+      on rooms.id = reservations.room_id \
+      ' + maybeWhere + ' \
+      group by rooms.id \
+      order by count desc';
 
-    if (queryLimit != undefined) {
-      compleArgs = compleArgs.concat(queryLimit);
-      sql += ' limit ?';
+  if (queryLimit != undefined) {
+    compleArgs = compleArgs.concat(queryLimit);
+    sql += ' limit ?';
+  }
+
+  db.all(sql, compleArgs, (err, rows) => {
+    if (err) {
+      console.log(err.message);
+      return res.status(500).send(err.message);
     }
 
-    console.log(sql);
-    console.log(compleArgs);
-    db.all(sql, compleArgs, (err, rows) => {
-      if (err) {
-        console.log(err.message);
-        return res.status(500).send(err.message);
-      }
-
-      res.status(200).json({
-        rooms: rows
-      });
+    res.status(200).json({
+      rooms: rows
     });
   });
 });
