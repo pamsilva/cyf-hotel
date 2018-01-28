@@ -79,10 +79,10 @@ router.post('/customer/', function(req, res) {
       email: req.body.email
     };
 
-    db.run(`INSERT INTO customers (title, firstname, surname, email) VALUES (?, ?, ?, ?)`, [user.title, user.firstname, user.surname, user.email], function(error) {
-      if (error) {
-        console.log(error.message);
-        res.status(500).send(error.message);
+    db.run(`INSERT INTO customers (title, firstname, surname, email) VALUES (?, ?, ?, ?)`, [user.title, user.firstname, user.surname, user.email], function(err) {
+      if (err) {
+        console.log(err.message);
+        res.status(500).send(err.message);
       }
 
       return res.status(201).send('Customer added successfully.');
@@ -134,10 +134,10 @@ router.put('/customer/:id', function(req, res) {
     const valuesToUpdate = getValuesToUpdate(user, propsToUpdate);
 
     const sql = 'UPDATE customers set ' + setStatements.join() + ' where id = ?';
-    db.run(sql, valuesToUpdate.concat(id), function (error) {
-      if (error) {
-        console.log(error.message);
-        return res.status(500).send(error.message);
+    db.run(sql, valuesToUpdate.concat(id), function (err) {
+      if (err) {
+        console.log(err.message);
+        return res.status(500).send(err.message);
       }
 
       return res.status(200).send('Updated customer ' + id + ' on the database successfully.');
@@ -208,10 +208,10 @@ router.post('/reservation', function(req, res) {
       reservation.check_in_date,
       reservation.check_out_date,
       reservation.room_price
-    ], function(error) {
-      if (error) {
-        console.log(error.message);
-        res.status(500).send(error.message);
+    ], function(err) {
+      if (err) {
+        console.log(err.message);
+        res.status(500).send(err.message);
       }
 
       return res.status(201).send('Reservation added successfully.');
@@ -233,8 +233,8 @@ router.get('/reservations/between/:from_day/:to_day', function(req, res) {
 
     db.all(sql, [endDate, startDate], (err, rows) => {
       if (err) {
-        console.log(error.message);
-        res.status(500).send(error.message);
+        console.log(err.message);
+        res.status(500).send(err.message);
       }
 
       res.status(200).json({
@@ -261,8 +261,8 @@ router.get('/reservations/details-between/:from_day/:to_day', function(req, res)
 
     db.all(sql, [endDate, startDate], (err, rows) => {
       if (err) {
-        console.log(error.message);
-        res.status(500).send(error.message);
+        console.log(err.message);
+        res.status(500).send(err.message);
       }
 
       res.status(200).json({
@@ -305,8 +305,8 @@ router.get('/reservations/for-customer/:customer_id', function(req, res) {
 
     db.all(sql, [id], (err, rows) => {
       if (err) {
-        console.log(error.message);
-        res.status(500).send(error.message);
+        console.log(err.message);
+        res.status(500).send(err.message);
       }
 
       res.status(200).json({
@@ -337,8 +337,8 @@ router.get('/rooms/available-in/:from_day/:to_day', function(req, res) {
 
     db.all(sql, params, (err, rows) => {
       if (err) {
-        console.log(error.message);
-        res.status(500).send(error.message);
+        console.log(err.message);
+        return res.status(500).send(err.message);
       }
 
       res.status(200).json({
@@ -346,7 +346,76 @@ router.get('/rooms/available-in/:from_day/:to_day', function(req, res) {
         startDate, endDate
       });
     });
+  });
+});
 
+
+function maybeDefineWeb(startDate, endDate) {
+  let args = [];
+  let maybeWhere = '';
+
+  if (startDate != undefined || endDate != undefined) {
+    maybeWhere = ' where'
+  }
+
+  if (startDate != undefined) {
+    maybeWhere += ' reservations.check_out_date > ?';
+    args = args.concat(startDate);
+  }
+
+  if (startDate != undefined && endDate != undefined) {
+    maybeWhere += ' and';
+  }
+
+  if (endDate != undefined) {
+    maybeWhere += ' reservations.check_in_date < ?'
+    args = args.concat(endDate);
+  }
+
+  return {
+    args, maybeWhere
+  }
+}
+
+
+router.get('/most-reserved-rooms', function(req, res) {
+  // Optional query parameters
+  // .../most-reserved-rooms?limit=10
+  // .../most-reserved-rooms?startDate=2018-01-01
+  // .../most-reserved-rooms?endDate=2018-01-01
+
+  db.serialize(function() {
+    const queryLimit = req.query.limit;
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+
+    const {args, maybeWhere} = maybeDefineWeb(startDate, endDate);
+    let compleArgs = args;
+
+    let sql = 'select rooms.*, count(1) as count \
+        from rooms join reservations \
+        on rooms.id = reservations.room_id \
+        ' + maybeWhere + ' \
+        group by rooms.id \
+        order by count desc';
+
+    if (queryLimit != undefined) {
+      compleArgs = compleArgs.concat(queryLimit);
+      sql += ' limit ?';
+    }
+
+    console.log(sql);
+    console.log(compleArgs);
+    db.all(sql, compleArgs, (err, rows) => {
+      if (err) {
+        console.log(err.message);
+        return res.status(500).send(err.message);
+      }
+
+      res.status(200).json({
+        rooms: rows
+      });
+    });
   });
 });
 
