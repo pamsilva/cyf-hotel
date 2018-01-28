@@ -31,6 +31,7 @@ router.get('/customers', function(req, res) {
 
 });
 
+
 router.get('/customers/:surname', function(req, res) {
   db.serialize(function() {
     const surname = req.params.surname;
@@ -44,6 +45,7 @@ router.get('/customers/:surname', function(req, res) {
   });
 });
 
+
 router.get('/customer/:id', function(req, res) {
   db.serialize(function() {
     const id = req.params.id;
@@ -54,6 +56,7 @@ router.get('/customer/:id', function(req, res) {
     });
   })
 });
+
 
 router.post('/customer/', function(req, res) {
   // EXPECTED JSON Object:
@@ -143,21 +146,23 @@ router.put('/customer/:id', function(req, res) {
   });
 });
 
-// ------------------------------------------------------------------------
-// Create reservations table
+// ////////////////////////////////////
+// STEP: Create reservations table
+// ////////////////////////////////////
 
 router.get('/reservations', function(req, res) {
   db.serialize(function() {
     const sql = 'select * from reservations';
     console.log(sql);
 
-    db.get(sql, [],(err, rows) => {
+    db.all(sql, [],(err, rows) => {
       res.status(200).json({
         customers: rows
       });
     });
   });
 });
+
 
 // ------------------------------------------------------------------------
 // Second practical part
@@ -175,6 +180,7 @@ router.get('/reservation/:id', function(req, res) {
     });
   });
 });
+
 
 router.post('/reservation', function(req, res) {
   // EXPECTED JSON Object:
@@ -214,6 +220,7 @@ router.post('/reservation', function(req, res) {
 });
 
 
+// TODO: add filtering here!!!
 router.get('/reservations/date-from/:dateFrom', function(req, res) {
   db.serialize(function() {
     const dateFrom = req.params.dateFrom;
@@ -228,6 +235,7 @@ router.get('/reservations/date-from/:dateFrom', function(req, res) {
   });
 });
 
+
 router.delete('/reservation/:id', function(req, res) {
   db.serialize(function() {
     const id = req.params.id;
@@ -236,9 +244,9 @@ router.delete('/reservation/:id', function(req, res) {
 
     // alternative that prevents sqlinjection
     // const sql = 'delete from reservations where id = ?';
-    const sql = 'delete from reservations where id ' + id;
+    const sql = 'delete from reservations where id = ' + id;
 
-    db.run(sql, [id],(err, rows) => {
+    db.run(sql, [id], (err, rows) => {
       res.status(200).json({
         customers: rows
       });
@@ -246,12 +254,62 @@ router.delete('/reservation/:id', function(req, res) {
   });
 });
 
+
 router.get('/reservations/for-customer/:customer_id', function(req, res) {
-  res.status(400).send("No valid customer_id was provided.");
+  db.serialize(function() {
+    const id = req.params.customer_id;
+
+    const sql = 'select reservations.* \
+      from reservations join customers \
+      on customers.id = reservations.customer_id \
+      where customers.id = ? \
+      order by reservations.check_in_date';
+
+    db.all(sql, [id], (err, rows) => {
+      if (err){
+        console.log(error.message);
+        res.status(500).send(error.message);
+      }
+
+      res.status(200).json({
+        reservations: rows,
+        customer_id: id,
+      });
+    });
+  });
 });
 
+
 router.get('/rooms/available-in/:from_day/:to_day', function(req, res) {
-  res.status(400).send("No valid date range was provided.");
+
+  db.serialize(function() {
+    const startDate = req.params.from_day;
+    const endDate = req.params.to_day;
+
+    const params = [endDate, startDate];
+    const sql = 'select * \
+        from rooms join room_types \
+        on rooms.room_type_id = room_types.id \
+        where rooms.id not in ( \
+          select rooms.id from rooms join reservations \
+          on rooms.id = reservations.room_id \
+          where reservations.check_in_date < ? \
+          and reservations.check_out_date > ? \
+        )';
+
+    db.all(sql, params, (err, rows) => {
+      if (err){
+        console.log(error.message);
+        res.status(500).send(error.message);
+      }
+
+      res.status(200).json({
+        rooms: rows,
+        startDate, endDate
+      });
+    });
+
+  });
 });
 
 
