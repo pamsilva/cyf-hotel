@@ -246,6 +246,34 @@ router.get('/reservations/between/:from_day/:to_day', function(req, res) {
 });
 
 
+router.get('/reservations/details-between/:from_day/:to_day', function(req, res) {
+  db.serialize(function() {
+    const startDate = req.params.from_day;
+    const endDate = req.params.to_day;
+
+    const sql = '\
+      select reservations.*, rooms.*, customers.* from reservations \
+      join rooms on reservations.room_id = rooms.id \
+      join customers on reservations.customer_id = customers.id \
+      where check_in_date < ? \
+      and check_out_date > ? \
+      order by check_in_date';
+
+    db.all(sql, [endDate, startDate], (err, rows) => {
+      if (err) {
+        console.log(error.message);
+        res.status(500).send(error.message);
+      }
+
+      res.status(200).json({
+        reservations: rows,
+        startDate, endDate
+      });
+    });
+  });
+});
+
+
 router.delete('/reservation/:id/', function(req, res) {
   db.serialize(function() {
     const id = req.params.id;
