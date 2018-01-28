@@ -22,7 +22,7 @@ router.get('/customers', function(req, res) {
 
     var sql = 'select * from customers';
 
-    db.all(sql, [],(err, rows ) => {
+    db.all(sql, [], (err, rows ) => {
       res.status(200).json({
         customers: rows
       });
@@ -155,7 +155,7 @@ router.get('/reservations', function(req, res) {
     const sql = 'select * from reservations';
     console.log(sql);
 
-    db.all(sql, [],(err, rows) => {
+    db.all(sql, [], (err, rows) => {
       res.status(200).json({
         customers: rows
       });
@@ -165,7 +165,7 @@ router.get('/reservations', function(req, res) {
 
 
 // ------------------------------------------------------------------------
-// Second practical part
+// Second class practical part
 
 router.get('/reservation/:id', function(req, res) {
   db.serialize(function() {
@@ -173,7 +173,7 @@ router.get('/reservation/:id', function(req, res) {
     const sql = 'select * from reservations where id = ' + id;
     console.log(sql);
 
-    db.get(sql, [],(err, rows) => {
+    db.get(sql, [], (err, rows) => {
       res.status(200).json({
         customers: rows
       });
@@ -220,23 +220,33 @@ router.post('/reservation', function(req, res) {
 });
 
 
-// TODO: add filtering here!!!
-router.get('/reservations/date-from/:dateFrom', function(req, res) {
+router.get('/reservations/between/:from_day/:to_day', function(req, res) {
   db.serialize(function() {
-    const dateFrom = req.params.dateFrom;
-    const sql = 'select * from reservations';
-    console.log(sql);
+    const startDate = req.params.from_day;
+    const endDate = req.params.to_day;
 
-    db.get(sql, [],(err, rows) => {
+    const sql = '\
+      select * from reservations \
+      where check_in_date < ? \
+      and check_out_date > ? \
+      order by check_in_date';
+
+    db.all(sql, [endDate, startDate], (err, rows) => {
+      if (err) {
+        console.log(error.message);
+        res.status(500).send(error.message);
+      }
+
       res.status(200).json({
-        customers: rows
+        reservations: rows,
+        startDate, endDate
       });
     });
   });
 });
 
 
-router.delete('/reservation/:id', function(req, res) {
+router.delete('/reservation/:id/', function(req, res) {
   db.serialize(function() {
     const id = req.params.id;
     // SQL injected url to delete all reservation entries:
@@ -266,7 +276,7 @@ router.get('/reservations/for-customer/:customer_id', function(req, res) {
       order by reservations.check_in_date';
 
     db.all(sql, [id], (err, rows) => {
-      if (err){
+      if (err) {
         console.log(error.message);
         res.status(500).send(error.message);
       }
@@ -298,7 +308,7 @@ router.get('/rooms/available-in/:from_day/:to_day', function(req, res) {
         )';
 
     db.all(sql, params, (err, rows) => {
-      if (err){
+      if (err) {
         console.log(error.message);
         res.status(500).send(error.message);
       }
