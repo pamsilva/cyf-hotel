@@ -13,7 +13,7 @@ This exercise involves implementing various aspects of a hotel booking system. I
 The tasks build on your previous experience using SQL with SQLite and Node.js. The key components of the application are as follows:
 
 * `index.js` - sets up the application for use
-* `server/api.js` - routes and application logic for the API 
+* `server/api.js` - routes and application logic for the API
 * `public/*` - each folder contains the front-end code that interacts with the API for each exercise below
 * `database/database.sqlite` - SQLite database containing some seed data
 
@@ -29,106 +29,115 @@ In order to complete the exercises below, you will need to edit the code in `/se
 
 Go to http://localhost:8080/ to get started.
 
-### Exercise 0
-
-Before getting started, we need to complete the database schema. The database provided contains 4 tables - you must create the tables `reviews` and `reservations` in order to complete it. You should set up these tables as follows:
-
-```
-reservations
-id INTEGER PRIMARY KEY AUTOINCREMENT
-customer_id INTEGER 
-room_id INTEGER
-check_in_date DATE
-check_out_date DATE
-room_price INTEGER
-
-reviews
-id INTEGER PRIMARY KEY AUTOINCREMENT
-customer_id INTEGER
-room_type_id INTEGER
-rating INTEGER
-comment TEXT
-review_date DATE
-```
-
-You can do this however you choose - through the sqlite command line interfact, or via a GUI such as [SQLiteStudio](https://sqlitestudio.pl/index.rvt).
-
-### Exercise 1
+# Class 2
 
 **User story:** As a staff member, I want to be able to view a list of customers so that I can see who has visited our hotel
 
 An example has been provided for this exercise, showing how to interact with the SQLite database. Simply uncomment the TODO section, and comment out the existing JSON response being returned.
 
-### Exercise 2
+Or:
+
+Use what you have learned about to SQL to fill in the query that fetches all the customers from the database.
+
+- simple select everything
+
+**User story:** As a staff member I need to check the details of a given customer given its id.
+
+Complete the end-point `/customer/:id`, so that it extracts that customer information from the database, and replies back with that information as JSON.
+
+- simple and single filter by id
+
+**User story:** As a staff member I want to search for a customer through its `surname`.
+
+Complete the end-point `/customers/:surname`, so that it extracts that customer information from the database, and replies back with that information as JSON.
+
+- select and filter through like
 
 **User story:** As a guest, I want to register my details so that I can check availability for my stay
 
-Take the data being POSTed to the /customers endpoint and insert it into the database.
+Take the data being POSTed to the `/customer` endpoint and insert it into the database.
 
-### Exercise 3
+- insert into
 
-**User story:** As a guest, I want to browse the types of rooms available at the hotel in ascending price order so I can decide which room I'd like to book
+**User story:** As a guest, I noticed that there is a typo on my details and wish to correct it.
 
-We store prices in pennies as `integer`s rather than as `float`s as they tend to cause less problems when performing calculations.
+Take the data being PUTed to the `/customer/:id` endpoint and update the corresponding entry on the database.
 
-Where the `current_price` does not equal the `standard_price`, show the `standard_price` with a line through, and the `current_price` immediately after (e.g. ~~£80~~ £70).
+Note that the end-point should properly detect which cuseomer properties are being sent to update, and generate the appropriate SQL update statement.
 
-### Exercise 4
+- update table
 
-**User story:** As a staff member, I want to be able to apply a discount to the rate of a specific type of room so that it will encourage bookings
+**Task:** Add the `reservations` table to the datbase - and schema file - so that we start handling reservations.
 
-You can check this is working correctly by cross-referencing with the interface in exercise 3.
+- create table
 
-### Exercise 5
+Then run the provided `reservations.sql` in order to insert a few reservation entries.
 
-**User story:** As a guest, I want to book a room so that I have somewhere to stay on my holiday
+**User story** As a staff member, I want to get a list of all the existing reservations.
 
-Bear in mind that the `room_price` should be set to the `current_price` of the `room_type` table. 
+Create an end-point to get from `/reservations` all existing reservations.
 
-### Exercise 6
+- simple select
+- create the enpoint from scratch
 
-**User story:** As a staff member, I want to be able to search for a booking by the customer's reservation ID or name so that I can confirm their stay
+**User story** As a customer, I want to check the details of by reservation.
 
-You will need to implement both search methods in this page.
+Create and end-point to get from `/reservation/:id`, the information of a given resrevation.
 
-### Exercise 7
+- simple filtering
 
-**User story:** As a staff member, I want to be able to see a list of the bookings within the next 30 days of a specified date in chronological order so that I can prepare the hotel
+**User story** As a staff member, I want to get a list of all the reservations that start at a given date.
 
-This interface should show a list of upcoming bookings, including customer name and the type of room (e.g. King) - not just the IDs
+Create and end-point to get from `/reservations/starting-on/:startDate`, all the reservations that start at a given date.
 
-### Exercise 8
+- Simple filtering
 
-**User story:** As a staff member, I want to be able to create an invoice including any surcharges so that I can request payment from guests
+**User story** As a staff member, i want to get a list of all the reservations that are active at a given date.
 
-This interface should return an invoice for the customer that includes:
+- Multiple filtering.
 
-* Customer name
-* Check in date
-* Check out date
-* Room number
-* Room type
-* Room cost
-* Surcharges
-* Total cost
-* Paid (whether the invoice is due or has been paid already)
 
-### Exercise 9
+# Class 3
 
-**User story:** As a guest, I want to be able to leave a review so that I can inform others about the quality of the rooms
+**User story** As a staff member, I want to get a list of all the reservations that are active within a period of time
 
-The guest should be able to submit a review for the type of room they stayed in, including a rating from 1-5 stars.
+- Multiple filters
+- More elaborate logic
 
-### Exercise 10
+**User story:** As a staff member, I want to delete a canceled reservation from the database.
 
-**User story:** As hotel manager, I want to display average rating and reviews of each room type so that guests can feel comfortable about the quality of the hotel
+- delete
+- introduce sql-injection
 
-For this exercise, you are on your own! You will need to create the HTML UI, the API endpoint, and the relevant queries to fetch the aggregated rating for each room, plus the reviews for each. This will require joins to fetch the required data and an operation to calculate the average rating. You might find it helpful to copy the UI boilerplate from the previous exercises, but feel free to try writing the whole interface yourself.
+**Sub-Task** Fix the current endpoint, as well as all the existing ones, to use sql parameters in order to preven sql-injection.
 
-### Stretch Goals
+**User story:** As a staff member, I want to get all the reservations for a target customer-id.
 
-* Can you add validation to ensure erroneous data isn't added to the endpoints that insert data into the database?
-* Can you add error messages to describe the errors that are encountered?
-* Can you add a success message when data has been added/updated successfully?
-* Can you ensure each customer added has a unique email address?
-* Can you replace the input fields that ask for an ID with a dropdown allowing the user to select one of the existing records?
+- join
+- filtering the join
+
+**User story** As a staff member, I want to get a list of all the reservations active within a specific date range, including room and customer information, ordered by `check_in_date`.
+
+- Multiple filters.
+- Multiple joins.
+- Ordered
+
+**User story** As a customer, I want to get a list of the available rooms withing a date range, so that I can make my reservation.
+
+I need the details of the room type in order to choose the best room possible.
+
+- join
+- filtering the join
+- sub-query
+- join and filtering on sub-query
+
+
+**User story** As a manager, I want to get a list of the reservations each room has ad, so that I can evaluate which are the most proffitable, and which are the preffered rooms. In addition, I need to be able to:
+  - get a limited number of results - as in the top 10 most reserved rooms,
+  - filter for a particular time range (e.g. checking which roms usually get more reservations during summer, or during winter).
+  - specify which
+
+- join
+- filtering the join
+- group by
+- limit
