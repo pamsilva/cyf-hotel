@@ -27,24 +27,27 @@ router.get('/customers', function(req, res) {
 });
 
 
-router.get('/customers/:surname', function(req, res) {
-  const surname = req.params.surname;
-  const sql = 'select * from customers where surname like ?';
-
-  db.get(sql, [surname], function(err, rows) {
-    res.status(200).json({
-      customers: rows
-    });
-  });
-});
-
-
 router.get('/customer/:id', function(req, res) {
   const id = req.params.id;
   const sql = 'select * from customers where id = ?';
 
   db.get(sql, [id], (err, rows) => {
     res.status(200).json(rows);
+  });
+});
+
+
+router.get('/customers/:surname', function(req, res) {
+  const surname = req.params.surname == undefined ?
+    req.params.surname : '%' + req.params.surname + '%';
+  const sql = 'select * from customers where surname like ?';
+
+  console.log(sql);
+  console.log(surname);
+  db.all(sql, ['%'+surname+'%'], function(err, rows) {
+    res.status(200).json({
+      customers: rows
+    });
   });
 });
 
@@ -67,6 +70,8 @@ router.post('/customer/', function(req, res) {
     surname: req.body.surname,
     email: req.body.email
   };
+
+  console.log(req.body);
 
   db.run(`INSERT INTO customers (title, firstname, surname, email) VALUES (?, ?, ?, ?)`, [user.title, user.firstname, user.surname, user.email], function(err) {
     if (err) {
@@ -133,6 +138,7 @@ router.put('/customer/:id', function(req, res) {
 
 // ////////////////////////////////////
 // STEP: Create reservations table
+// TODO: create SQL file to insert a few reservations - should match the existing rooms and customer data.
 // ////////////////////////////////////
 
 router.get('/reservations', function(req, res) {
@@ -147,9 +153,7 @@ router.get('/reservations', function(req, res) {
 });
 
 
-// ------------------------------------------------------------------------
-// Second class practical part
-
+// Homework exercise - similar to what we already have
 router.get('/reservation/:id', function(req, res) {
   const id = req.params.id;
   const sql = 'select * from reservations where id = ' + id;
@@ -163,6 +167,33 @@ router.get('/reservation/:id', function(req, res) {
 });
 
 
+router.get('/reservations/starting-on/:startDate', function(req, res) {
+  const startDate = req.params.from_day;
+  const sql = 'select * from reservations where check_in_date = ?';
+
+  db.all(sql, [startDate], (err, rows) => {
+    res.status(200).json({
+      customers: rows
+    });
+  });
+});
+
+
+// Stretch/Homework exercise
+router.get('/reservations/active-on/:date', function(req, res) {
+  const date = req.params.from_day;
+  const sql = 'select * from reservations  \
+      where check_in_date < ? and check_out_date > ?';
+
+  db.all(sql, [date, date], (err, rows) => {
+    res.status(200).json({
+      customers: rows
+    });
+  });
+});
+
+
+// Stretch/Homework exercise
 router.post('/reservation', function(req, res) {
   // EXPECTED JSON Object:
   // {
@@ -197,6 +228,10 @@ router.post('/reservation', function(req, res) {
     return res.status(201).send('Reservation added successfully.');
   });
 });
+
+
+// ------------------------------------------------------------------------
+// Second class practical part
 
 
 router.get('/reservations/between/:from_day/:to_day', function(req, res) {
@@ -250,13 +285,14 @@ router.get('/reservations/details-between/:from_day/:to_day', function(req, res)
 
 
 router.delete('/reservation/:id/', function(req, res) {
-  const id = req.params.id;
   // SQL injected url to delete all reservation entries:
   // curl -X DELETE http://localhost:8080/api/reservation/6%20or%201%3D1
 
-  // alternative that prevents sqlinjection
-  // const sql = 'delete from reservations where id = ?';
+  const id = req.params.id;
   const sql = 'delete from reservations where id = ' + id;
+
+  // alternative that prevents sql-injection
+  // const sql = 'delete from reservations where id = ?';
 
   db.run(sql, [id], (err, rows) => {
     res.status(200).json({
@@ -318,7 +354,7 @@ router.get('/rooms/available-in/:from_day/:to_day', function(req, res) {
 });
 
 
-function maybeDefineWeb(startDate, endDate) {
+function maybeDefineWhereClause(startDate, endDate) {
   let args = [];
   let maybeWhere = '';
 
@@ -346,7 +382,7 @@ function maybeDefineWeb(startDate, endDate) {
 }
 
 
-router.get('/most-reserved-rooms', function(req, res) {
+router.get('/reservations-per-room', function(req, res) {
   // Optional query parameters
   // .../most-reserved-rooms?limit=10
   // .../most-reserved-rooms?startDate=2018-01-01
@@ -356,8 +392,8 @@ router.get('/most-reserved-rooms', function(req, res) {
   const startDate = req.query.startDate;
   const endDate = req.query.endDate;
 
-  const {args, maybeWhere} = maybeDefineWeb(startDate, endDate);
-  let compleArgs = args;
+  const {args, maybeWhere} = maybeDefineWhereClause(startDate, endDate);
+  let completeArgs = args;
 
   let sql = 'select rooms.*, count(1) as count \
       from rooms join reservations \
@@ -367,11 +403,11 @@ router.get('/most-reserved-rooms', function(req, res) {
       order by count desc';
 
   if (queryLimit != undefined) {
-    compleArgs = compleArgs.concat(queryLimit);
+    completeArgs = completeArgs.concat(queryLimit);
     sql += ' limit ?';
   }
 
-  db.all(sql, compleArgs, (err, rows) => {
+  db.all(sql, completeArgs, (err, rows) => {
     if (err) {
       console.log(err.message);
       return res.status(500).send(err.message);
