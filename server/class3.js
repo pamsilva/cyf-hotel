@@ -57,7 +57,7 @@ router.get('/reservations/details-between/:from_day/:to_day', function(req, res)
 });
 
 
-router.delete('/reservation/:id/', function(req, res) {
+router.delete('/reservations/:id/', function(req, res) {
   // SQL injected url to delete all reservation entries:
   // curl -X DELETE http://localhost:8080/api/reservation/6%20or%201%3D1
 
